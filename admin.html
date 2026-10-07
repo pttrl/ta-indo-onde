@@ -4,7 +4,7 @@
 <title>Painel dos sócios — TIO</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="style.css?v=16"></head><body>
+<link rel="stylesheet" href="style.css?v=17"></head><body>
 <header class="bar"><div class="wrap"><a class="logo" href="./">TIO<i>.</i><small>tá indo onde?</small></a><nav><a href="./">Ver site</a><button id="sair">Sair</button></nav></div></header>
 <main class="page wide">
 <div id="bloq" hidden><h1>Acesso restrito</h1><p>Esta área é só para sócios. <a href="entrar.html">Entrar com outra conta</a></p></div>
@@ -25,6 +25,7 @@
 <label class="ck"><input type="checkbox" id="vip"><span>Tem Lista VIP</span></label>
 <label class="ck"><input type="checkbox" id="cupom"><span>Tem cupom de desconto</span></label>
 <label class="ck"><input type="checkbox" id="dest"><span>Destaque (aparece em "Bombando")</span></label>
+<label>Descrição do evento (aparece na página do evento, só para cadastrados)<textarea id="desc" maxlength="2000" rows="5"></textarea></label>
 <label>Imagem do evento (até 3 MB)<input id="img" type="file" accept="image/*"></label>
 <img id="pv" class="pv" alt="" hidden>
 <div class="row"><button class="btn" id="salvar">Salvar evento</button><button class="btn sec" id="cancelar">Limpar</button></div>
@@ -52,7 +53,7 @@ const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&
 const msg=t=>$("msg").textContent=t||"";
 const iso=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 let items=[],editId=null,imgAtual=null;
-function limpar(){editId=null;imgAtual=null;["titulo","data","hora","local","link","img","lat","lng","end"].forEach(i=>$(i).value="");$("cat").value="Balada";["vip","cupom","dest"].forEach(i=>$(i).checked=false);$("pv").hidden=true;$("tit").textContent="Novo evento";if(mk){mA.removeLayer(mk);mk=null}$("geoTxt").textContent="Opcional: marque onde fica.";$("geoRes").innerHTML=""}
+function limpar(){editId=null;imgAtual=null;["titulo","data","hora","local","link","img","lat","lng","end","desc"].forEach(i=>$(i).value="");$("cat").value="Balada";["vip","cupom","dest"].forEach(i=>$(i).checked=false);$("pv").hidden=true;$("tit").textContent="Novo evento";if(mk){mA.removeLayer(mk);mk=null}$("geoTxt").textContent="Opcional: marque onde fica.";$("geoRes").innerHTML=""}
 async function carregar(){
   const {data,error}=await db.from("eventos").select("*").gte("data",iso(new Date())).order("data").order("hora");
   if(error)return msg("Erro ao carregar: "+error.message);
@@ -90,6 +91,7 @@ function escolher(i){const x=resultados[i];ponto(+x.lat,+x.lon,17);$("geoRes").i
 $("geo").onclick=buscarEnd;
 $("end").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();buscarEnd()}});
 $("geoRes").onclick=e=>{const i=e.target.dataset.g;if(i!==undefined)escolher(+i)};
+$("end").addEventListener("input",()=>{$("lat").value="";$("lng").value="";if(mk){mA.removeLayer(mk);mk=null}$("geoTxt").textContent="Endereço alterado: busque no mapa de novo."});
 
 async function carregarAv(){
   const {data,error}=await db.from("avisos").select("*").order("criado_em",{ascending:false}).limit(20);
@@ -149,6 +151,8 @@ $("cancelar").onclick=()=>{limpar();msg()};
 $("img").onchange=()=>{const f=$("img").files[0];if(f){$("pv").src=URL.createObjectURL(f);$("pv").hidden=false}};
 $("salvar").onclick=async()=>{
   if(!$("titulo").value.trim()||!$("data").value||!$("local").value.trim())return msg("Preencha nome, data e local.");
+  if(!$("end").value.trim())return msg("Preencha o endereço do evento.");
+  if(!$("lat").value||!$("lng").value)return msg("Clique em \"Buscar endereço no mapa\" e confirme o pino antes de salvar.");
   let url=imgAtual;const f=$("img").files[0];
   if(f){
     if(f.size>3e6)return msg("A imagem passa de 3 MB. Escolha uma menor.");
@@ -159,13 +163,17 @@ $("salvar").onclick=async()=>{
     url=db.storage.from("imagens").getPublicUrl(path).data.publicUrl;
   }
   const reg={titulo:$("titulo").value.trim(),data:$("data").value,hora:$("hora").value||null,local:$("local").value.trim(),link_ingresso:$("link").value.trim()||null,categoria:$("cat").value,imagem_url:url,endereco:$("end").value.trim()||null,lat:$("lat").value?+$("lat").value:null,lng:$("lng").value?+$("lng").value:null,lista_vip:$("vip").checked,cupom:$("cupom").checked,destaque:$("dest").checked};
-  const {error}=editId?await db.from("eventos").update(reg).eq("id",editId):await db.from("eventos").insert(reg);
+  let id=editId,error;
+  if(editId){({error}=await db.from("eventos").update(reg).eq("id",editId))}
+  else{const r=await db.from("eventos").insert(reg).select("id").single();error=r.error;id=r.data?.id}
   if(error)return msg("Não salvou: "+error.message);
+  const {error:e2}=await db.from("eventos_detalhes").upsert({evento_id:id,descricao:$("desc").value.trim()},{onConflict:"evento_id"});
+  if(e2)return msg("O evento foi salvo, mas a descrição não: "+e2.message);
   limpar();msg("Evento salvo.");carregar();
 };
 $("lista").onclick=async e=>{
   const ed=e.target.dataset.ed,ex=e.target.dataset.ex;
-  if(ed){const x=items.find(i=>i.id===ed);editId=ed;imgAtual=x.imagem_url;$("titulo").value=x.titulo;$("data").value=x.data;$("hora").value=x.hora?x.hora.slice(0,5):"";$("local").value=x.local;$("link").value=x.link_ingresso||"";$("cat").value=x.categoria;$("end").value=x.endereco||"";if(x.lat!=null&&x.lng!=null)ponto(x.lat,x.lng,16);else{if(mk){mA.removeLayer(mk);mk=null}$("lat").value="";$("lng").value="";$("geoTxt").textContent="Opcional: marque onde fica."}$("vip").checked=!!x.lista_vip;$("cupom").checked=!!x.cupom;$("dest").checked=!!x.destaque;$("pv").hidden=!x.imagem_url;if(x.imagem_url)$("pv").src=x.imagem_url;$("tit").textContent="Editar evento";scrollTo(0,0)}
+  if(ed){const x=items.find(i=>i.id===ed);editId=ed;imgAtual=x.imagem_url;$("titulo").value=x.titulo;$("data").value=x.data;$("hora").value=x.hora?x.hora.slice(0,5):"";$("local").value=x.local;$("link").value=x.link_ingresso||"";$("cat").value=x.categoria;$("end").value=x.endereco||"";if(x.lat!=null&&x.lng!=null)ponto(x.lat,x.lng,16);else{if(mk){mA.removeLayer(mk);mk=null}$("lat").value="";$("lng").value="";$("geoTxt").textContent="Opcional: marque onde fica."}$("vip").checked=!!x.lista_vip;$("cupom").checked=!!x.cupom;$("dest").checked=!!x.destaque;$("pv").hidden=!x.imagem_url;if(x.imagem_url)$("pv").src=x.imagem_url;$("tit").textContent="Editar evento";scrollTo(0,0);const {data:dd}=await db.from("eventos_detalhes").select("descricao").eq("evento_id",x.id).maybeSingle();$("desc").value=dd?.descricao||""}
   if(ex&&confirm("Excluir este evento?")){const {error}=await db.from("eventos").delete().eq("id",ex);msg(error?"Não excluiu: "+error.message:"Evento excluído.");carregar()}
 };
 </script></body></html>

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>Evento — TIO</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=17"></head><body>
+<header class="bar"><div class="wrap"><a class="logo" href="./">TIO<i>.</i><small>tá indo onde?</small></a><nav><a href="./">← Voltar</a></nav></div></header>
+<main id="m"><p class="vazio" style="text-align:center;padding:48px 20px">Carregando evento...</p></main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script>
+const db=supabase.createClient(new URL(SUPABASE_URL.trim()).origin,SUPABASE_KEY.trim()),$=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const okUrl=u=>/^https:\/\/[^\s'"()\\]+$/.test(u||"");
+const EMO={Balada:"🪩",Show:"🎸",Festa:"🎉",Bar:"🍸",Cultura:"🎭",Outros:"✨"};
+const id=new URLSearchParams(location.search).get("id")||"";
+const erro=t=>$("m").innerHTML=`<p class="vazio" style="text-align:center;padding:48px 20px">${esc(t)}<br><br><a class="btn" href="./">Voltar ao início</a></p>`;
+function mostrar(e,desc){
+  document.title=e.titulo+" — TIO";
+  const img=okUrl(e.imagem_url),ok=/^https?:\/\//i.test(e.link_ingresso||"");
+  const data=new Date(e.data+"T00:00").toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"});
+  const rota=e.lat!=null&&e.lng!=null?`https://www.google.com/maps/dir/?api=1&destination=${e.lat},${e.lng}`:"";
+  $("m").innerHTML=`<div class="banner" data-c="${esc(e.categoria)}" ${img?`style="background-image:url('${e.imagem_url}')"`:""}>${img?"":EMO[e.categoria]||"✨"}</div>
+  <div class="ev-top">
+  <div class="tags2"><em>${esc(e.categoria)}</em>${e.lista_vip?'<em class="v">Lista VIP</em>':""}${e.cupom?'<em class="c">Cupom</em>':""}</div>
+  <h1>${esc(e.titulo)}</h1>
+  <div class="feats"><div><span>Quando</span><b style="text-transform:capitalize">${esc(data)}</b><span>${e.hora?e.hora.slice(0,5):"Horário a confirmar"}</span></div>
+  <div><span>Onde</span><b>${esc(e.local)}</b><span>${esc(e.endereco||"")}</span></div></div>
+  <div class="acoes">${ok?`<a class="btn" href="${esc(e.link_ingresso)}" target="_blank" rel="noopener">Comprar ingresso</a>`:""}${rota?`<a class="btn sec" href="${esc(rota)}" target="_blank" rel="noopener">Como chegar</a>`:""}</div>
+  <h2 style="font-size:1.4rem;margin:32px 0 12px">Sobre o evento</h2>
+  <p class="desc">${desc?esc(desc):"Os sócios ainda não adicionaram uma descrição para este evento."}</p>
+  <p style="height:56px"></p></div>`;
+}
+(async()=>{
+  const {data:{session}}=await db.auth.getSession();
+  if(!session)return location.href="entrar.html?volta="+encodeURIComponent("evento.html?id="+id);
+  if(!/^[0-9a-f-]{36}$/i.test(id))return erro("Evento não encontrado.");
+  const [a,b]=await Promise.all([db.from("eventos").select("*").eq("id",id).maybeSingle(),db.from("eventos_detalhes").select("descricao").eq("evento_id",id).maybeSingle()]);
+  if(!a.data)return erro("Evento não encontrado ou já foi removido.");
+  mostrar(a.data,b.data?.descricao);
+})();
+</script></body></html>

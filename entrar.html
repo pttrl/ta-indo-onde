@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Entrar — TIO</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=16"></head><body>
+<link rel="stylesheet" href="style.css?v=17"></head><body>
 <header class="bar"><div class="wrap"><a class="logo" href="./">TIO<i>.</i><small>tá indo onde?</small></a><nav><a href="./">Voltar</a></nav></div></header>
 <main class="page"><h1 id="tit" style="font-size:2.4rem;margin:0 0 16px">Entrar</h1>
 <div class="box">
@@ -30,7 +30,8 @@ $("t1").onclick=()=>modo(false);$("t2").onclick=()=>modo(true);
 async function seguir(user){
   const {data:s,error}=await db.from("socios").select("user_id").eq("user_id",user.id).maybeSingle();
   if(error)return msg("Login ok, mas o banco ainda não foi atualizado. Rode o setup2.sql no Supabase. ("+error.message+")");
-  location.href=s?"admin.html":"./";
+  const v=new URLSearchParams(location.search).get("volta");
+  location.href=/^[\w-]+\.html(\?[\w=&%.\-]*)?$/.test(v||"")?v:(s?"admin.html":"./");
 }
 $("ok").onclick=async()=>{
   msg();const email=$("email").value.trim(),password=$("senha").value;
