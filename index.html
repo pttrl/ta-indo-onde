@@ -1,20 +1,19 @@
 <!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>agenda. — eventos da cidade</title>
+<title>TIO — eventos da cidade</title>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css"></head><body>
-<header class="bar"><div class="wrap"><a class="logo" href="./">agenda<i>.</i></a>
+<link rel="stylesheet" href="style.css?v=3"></head><body>
+<header class="bar"><div class="wrap"><a class="logo" href="./">TIO<i>.</i><small>tá indo onde?</small></a>
 <nav id="nav"><a class="on" href="entrar.html">Entrar</a></nav></div></header>
 <main class="wrap">
-<section class="hero"><p id="dataHoje"></p><h1>O que rola hoje</h1></section>
-<div class="grid" id="hoje"></div>
-<h2>Escolha um dia</h2>
-<div class="cal"><div class="nv"><button id="prev" aria-label="Mês anterior">‹</button><span id="mes"></span><button id="next" aria-label="Próximo mês">›</button></div><div class="g" id="grade"></div></div>
-<p class="sub" id="selTxt"></p><div class="grid" id="dia"></div>
+<section class="hero"><p id="dataSel"></p><h1 id="h1">O que rola hoje</h1></section>
+<div class="days" id="dias" aria-label="Escolha um dia"></div>
+<label class="outra">Outra data: <input type="date" id="outra"></label>
+<div class="grid" id="dia"></div>
 <h2>Próximos eventos</h2><div class="chips" id="chips"></div><div class="grid" id="feed"></div>
 </main>
-<footer>agenda. — atualizada pelos sócios</footer>
+<footer>TIO — atualizada pelos sócios</footer>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="config.js"></script>
 <script>
@@ -24,7 +23,7 @@ const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&
 const fmt=(s,o)=>new Date(s+"T00:00").toLocaleDateString("pt-BR",o);
 const okUrl=u=>/^https:\/\/[^\s'"()\\]+$/.test(u||"");
 const EMO={Balada:"🪩",Show:"🎸",Festa:"🎉",Bar:"🍸",Cultura:"🎭",Outros:"✨"};
-const hoje=iso(new Date());let ev=[],favs=new Set(),user=null,filtro="Todos",sel=hoje,cur=new Date();cur.setDate(1);
+const hoje=iso(new Date());let ev=[],favs=new Set(),user=null,filtro="Todos",sel=hoje;
 function card(e,showDate){
   const img=okUrl(e.imagem_url),f=favs.has(e.id),ok=/^https?:\/\//i.test(e.link_ingresso||"");
   return `<article class="card"><div class="img" data-c="${esc(e.categoria)}" ${img?`style="background-image:url('${e.imagem_url}')"`:""}>${img?"":EMO[e.categoria]||"✨"}<button class="fav${f?" on":""}" data-f="${e.id}" aria-label="Quero ir">${f?"♥":"♡"}</button></div>
@@ -33,25 +32,21 @@ function card(e,showDate){
   ${ok?`<a class="btn" href="${esc(e.link_ingresso)}" target="_blank" rel="noopener">Comprar ingresso</a>`:""}</div></article>`;
 }
 const lista=(a,sd,m)=>a.length?a.map(e=>card(e,sd)).join(""):`<div class="vazio">${m}</div>`;
-function cal(){
-  const y=cur.getFullYear(),m=cur.getMonth();
-  $("mes").textContent=cur.toLocaleDateString("pt-BR",{month:"long",year:"numeric"});
-  let h="DSTQQSS".split("").map(l=>`<span>${l}</span>`).join("");
-  for(let i=0;i<cur.getDay();i++)h+="<i></i>";
-  for(let d=1;d<=new Date(y,m+1,0).getDate();d++){const k=iso(new Date(y,m,d));
-    h+=`<button data-d="${k}" class="${ev.some(e=>e.data===k)?"has ":""}${k===sel?"sel ":""}${k===hoje?"hoje":""}">${d}</button>`}
-  $("grade").innerHTML=h;
+function strip(){
+  const ds=[];for(let i=0;i<30;i++){const d=new Date();d.setDate(d.getDate()+i);ds.push(iso(d))}
+  if(!ds.includes(sel))ds.unshift(sel);
+  $("dias").innerHTML=ds.map(k=>{const d=new Date(k+"T00:00");
+    return `<button class="day${k===sel?" sel":""}${ev.some(e=>e.data===k)?" has":""}" data-d="${k}"><small>${d.toLocaleDateString("pt-BR",{weekday:"short"}).replace(".","")}</small><b>${d.getDate()}</b><small>${d.toLocaleDateString("pt-BR",{month:"short"}).replace(".","")}</small></button>`}).join("");
 }
 function render(){
-  $("dataHoje").textContent=fmt(hoje,{weekday:"long",day:"numeric",month:"long"});
-  $("hoje").innerHTML=lista(ev.filter(e=>e.data===hoje),false,"Nenhum evento cadastrado para hoje.");
-  $("selTxt").textContent=fmt(sel,{weekday:"long",day:"numeric",month:"long"});
-  $("dia").innerHTML=lista(ev.filter(e=>e.data===sel),false,"Nada cadastrado para este dia.");
+  $("dataSel").textContent=fmt(sel,{weekday:"long",day:"numeric",month:"long"});
+  $("h1").textContent=sel===hoje?"O que rola hoje":"O que rola nesse dia";
+  $("dia").innerHTML=lista(ev.filter(e=>e.data===sel),false,"Nada cadastrado para este dia ainda.");
   const cats=["Todos","Balada","Show","Festa","Bar","Cultura","Outros"].concat(user?["Favoritos"]:[]);
   $("chips").innerHTML=cats.map(c=>`<button data-k="${c}" class="${c===filtro?"on":""}">${c==="Favoritos"?"♥ Quero ir":c}</button>`).join("");
   const f=ev.filter(e=>e.data>hoje&&(filtro==="Todos"||(filtro==="Favoritos"?favs.has(e.id):e.categoria===filtro)));
   $("feed").innerHTML=lista(f.slice(0,40),true,"Nenhum evento encontrado nesta seleção.");
-  cal();
+  strip();
 }
 document.addEventListener("click",async e=>{
   const t=e.target,d=t.dataset;
@@ -64,8 +59,7 @@ document.addEventListener("click",async e=>{
     render();
   }
 });
-$("prev").onclick=()=>{cur.setMonth(cur.getMonth()-1);cal()};
-$("next").onclick=()=>{cur.setMonth(cur.getMonth()+1);cal()};
+$("outra").onchange=e=>{if(e.target.value&&e.target.value>=hoje){sel=e.target.value;render()}};
 (async()=>{
   render();
   const {data:{session}}=await db.auth.getSession();user=session?.user||null;

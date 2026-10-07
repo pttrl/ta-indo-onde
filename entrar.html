@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Entrar — agenda.</title>
+<title>Entrar — TIO</title>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css"></head><body>
-<header class="bar"><div class="wrap"><a class="logo" href="./">agenda<i>.</i></a><nav><a href="./">Voltar</a></nav></div></header>
+<link rel="stylesheet" href="style.css?v=3"></head><body>
+<header class="bar"><div class="wrap"><a class="logo" href="./">TIO<i>.</i><small>tá indo onde?</small></a><nav><a href="./">Voltar</a></nav></div></header>
 <main class="page"><h1 id="tit" style="font-size:2.4rem;margin:0 0 16px">Entrar</h1>
 <div class="box">
 <div class="tabs"><button id="t1" class="on">Já tenho conta</button><button id="t2">Criar conta</button></div>
@@ -21,7 +21,8 @@ let novo=false;const msg=t=>$("msg").textContent=t||"";
 function modo(n){novo=n;$("t1").className=n?"":"on";$("t2").className=n?"on":"";$("ok").textContent=n?"Criar conta":"Entrar";$("tit").textContent=n?"Criar conta":"Entrar";msg()}
 $("t1").onclick=()=>modo(false);$("t2").onclick=()=>modo(true);
 async function seguir(user){
-  const {data:s}=await db.from("socios").select("user_id").eq("user_id",user.id).maybeSingle();
+  const {data:s,error}=await db.from("socios").select("user_id").eq("user_id",user.id).maybeSingle();
+  if(error)return msg("Login ok, mas o banco ainda não foi atualizado. Rode o setup2.sql no Supabase. ("+error.message+")");
   location.href=s?"admin.html":"./";
 }
 $("ok").onclick=async()=>{
@@ -34,7 +35,7 @@ $("ok").onclick=async()=>{
     return seguir(data.user);
   }
   const {data,error}=await db.auth.signInWithPassword({email,password});
-  if(error)return msg("E-mail ou senha incorretos.");
+  if(error)return msg(/confirm/i.test(error.message)?"Confirme seu e-mail pelo link que o Supabase enviou e depois entre.":"E-mail ou senha incorretos. ("+error.message+")");
   seguir(data.user);
 };
 db.auth.getSession().then(({data:{session}})=>{if(session)seguir(session.user)});
