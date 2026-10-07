@@ -79,3 +79,11 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 .hero{padding:40px 0 4px}
 .dia-t{font-size:clamp(1.9rem,6vw,2.8rem);font-weight:800;letter-spacing:-.03em;line-height:1;margin:6px 0 0}
 .oi{font-weight:600;padding:0 6px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* dias com evento: moldura de fogo */
+.day{position:relative;border-width:2px}
+.day.has{border-color:transparent;background:linear-gradient(var(--s),var(--s)) padding-box,linear-gradient(160deg,#FFD23F,#FF7A1A 55%,#E8345F) border-box;animation:arde 2.2s ease-in-out infinite}
+.day.has.fds{background:linear-gradient(#241D52,#241D52) padding-box,linear-gradient(160deg,#FFD23F,#FF7A1A 55%,#E8345F) border-box}
+.day.has::before{content:"🔥";position:absolute;top:-11px;right:-5px;font-size:1.15rem;line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5));pointer-events:none}
+.day.sel.has{background:linear-gradient(var(--acc),var(--acc)) padding-box,linear-gradient(160deg,#FFD23F,#FF7A1A 55%,#FFD23F) border-box;box-shadow:5px 7px 0 #7B2CBF,0 0 16px rgba(255,140,30,.6);animation:none}
+@keyframes arde{0%,100%{box-shadow:0 0 8px rgba(255,122,26,.3)}50%{box-shadow:0 0 18px rgba(255,160,40,.6)}}
+@media(prefers-reduced-motion:reduce){.day.has{animation:none;box-shadow:0 0 10px rgba(255,122,26,.4)}}
