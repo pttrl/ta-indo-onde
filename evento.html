@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
 <title>Evento — TIO</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=18"></head><body>
+<link rel="stylesheet" href="style.css?v=19"></head><body>
 <header class="bar"><div class="wrap"><a class="logo" href="./">TIO<i>.</i><small>tá indo onde?</small></a><nav><a href="./">← Voltar</a></nav></div></header>
 <main id="m"><p class="vazio" style="text-align:center;padding:48px 20px">Carregando evento...</p></main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
@@ -28,7 +28,7 @@ function mostrar(e,desc){
   <div><span>Onde</span><b>${esc(e.local)}</b><span>${esc(e.endereco||"")}</span></div></div>
   <div class="acoes">${ok?`<a class="btn" href="${esc(e.link_ingresso)}" target="_blank" rel="noopener">Comprar ingresso</a>`:""}${rota?`<a class="btn sec" href="${esc(rota)}" target="_blank" rel="noopener">Como chegar</a>`:""}</div>
   <h2 style="font-size:1.4rem;margin:32px 0 12px">Sobre o evento</h2>
-  <p class="desc">${desc?esc(desc):"Os sócios ainda não adicionaram uma descrição para este evento."}</p>
+  <p class="desc">${desc?esc(desc):"Ainda não há uma descrição para este evento."}</p>
   <p style="height:56px"></p></div>`;
 }
 (async()=>{
