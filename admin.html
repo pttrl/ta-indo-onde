@@ -1,83 +1,70 @@
 <!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="robots" content="noindex">
-<title>Painel dos sócios</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>Painel dos sócios — agenda.</title>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
-<style>
-:root{--bg:#F1EFF8;--ink:#1B1640;--mut:#6B6890;--acc:#E8345F;--card:#fff;--line:#DAD6EC}
-@media(prefers-color-scheme:dark){:root{--bg:#151232;--ink:#F1EFF8;--mut:#A9A5CC;--card:#201C45;--line:#33305E}}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Bricolage Grotesque",system-ui,sans-serif}
-main{max-width:640px;margin:auto;padding:24px 16px 64px}h1{font-size:2rem;font-weight:800;margin:8px 0 16px}h2{font-size:1.1rem;margin:28px 0 10px}
-.box{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:10px}
-label{display:grid;gap:2px;font-size:.9rem;color:var(--mut)}
-input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px}
-.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-button{font:inherit;font-weight:600;border:0;border-radius:8px;padding:8px 16px;cursor:pointer;background:var(--acc);color:#fff}
-button.sec{background:none;color:var(--ink);border:1px solid var(--line)}
-.it{display:flex;justify-content:space-between;gap:8px;align-items:center;border-bottom:1px solid var(--line);padding:10px 0}
-.it small{color:var(--mut);display:block}.it div:last-child{display:flex;gap:6px}
-#msg{min-height:1.5em;color:var(--acc)}.top{display:flex;justify-content:space-between;align-items:center}
-button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
-</style></head><body><main>
-<div id="login"><h1>Entrar</h1><div class="box">
-<label>E-mail<input id="email" type="email" autocomplete="username"></label>
-<label>Senha<input id="senha" type="password" autocomplete="current-password"></label>
-<button id="entrar">Entrar</button></div></div>
+<link rel="stylesheet" href="style.css"></head><body>
+<header class="bar"><div class="wrap"><a class="logo" href="./">agenda<i>.</i></a><nav><a href="./">Ver site</a><button id="sair">Sair</button></nav></div></header>
+<main class="page wide">
+<div id="bloq" hidden><h1>Acesso restrito</h1><p>Esta área é só para sócios. <a href="entrar.html">Entrar com outra conta</a></p></div>
 <div id="painel" hidden>
-<div class="top"><h1 id="tit">Novo evento</h1><button class="sec" id="sair">Sair</button></div>
+<h1 id="tit" style="font-size:2rem;margin:0 0 16px">Novo evento</h1>
 <div class="box">
 <label>Nome do evento<input id="titulo"></label>
 <div class="row"><label>Data<input id="data" type="date"></label><label>Horário<input id="hora" type="time"></label></div>
 <label>Local<input id="local"></label>
 <label>Link para comprar ingresso<input id="link" type="url" placeholder="https://"></label>
 <label>Categoria<select id="cat"><option>Balada</option><option>Show</option><option>Festa</option><option>Bar</option><option>Cultura</option><option>Outros</option></select></label>
-<div class="row"><button id="salvar">Salvar evento</button><button class="sec" id="cancelar">Limpar</button></div>
+<label>Imagem do evento (até 3 MB)<input id="img" type="file" accept="image/*"></label>
+<img id="pv" class="pv" alt="" hidden>
+<div class="row"><button class="btn" id="salvar">Salvar evento</button><button class="btn sec" id="cancelar">Limpar</button></div>
 </div>
-<h2>Eventos cadastrados</h2><div id="lista"></div>
-</div>
-<p id="msg" role="status"></p>
-</main>
+<h2 style="font-size:1.2rem">Eventos cadastrados</h2><div id="lista"></div>
+</div><p id="msg" role="status"></p></main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="config.js"></script>
 <script>
-const db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-const $=id=>document.getElementById(id);
+const db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY),$=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const msg=t=>$("msg").textContent=t||"";
-let items=[],editId=null;
-function iso(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
-function limpar(){editId=null;["titulo","data","hora","local","link"].forEach(i=>$(i).value="");$("cat").value="Balada";$("tit").textContent="Novo evento"}
+const iso=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+let items=[],editId=null,imgAtual=null;
+function limpar(){editId=null;imgAtual=null;["titulo","data","hora","local","link","img"].forEach(i=>$(i).value="");$("cat").value="Balada";$("pv").hidden=true;$("tit").textContent="Novo evento"}
 async function carregar(){
   const {data,error}=await db.from("eventos").select("*").gte("data",iso(new Date())).order("data").order("hora");
   if(error)return msg("Erro ao carregar: "+error.message);
   items=data;
-  $("lista").innerHTML=items.length?items.map(e=>`<div class="it"><div><b>${esc(e.titulo)}</b><small>${esc(e.data.split("-").reverse().join("/"))} ${e.hora?e.hora.slice(0,5):""} · ${esc(e.local)}</small></div><div><button class="sec" data-ed="${e.id}">Editar</button><button class="sec" data-ex="${e.id}">Excluir</button></div></div>`).join(""):"<p>Nenhum evento futuro cadastrado.</p>";
+  $("lista").innerHTML=items.length?items.map(e=>`<div class="it"><div><b>${esc(e.titulo)}</b><small>${esc(e.data.split("-").reverse().join("/"))} ${e.hora?e.hora.slice(0,5):""} · ${esc(e.local)}</small></div><div><button class="btn sec" data-ed="${e.id}">Editar</button><button class="btn sec" data-ex="${e.id}">Excluir</button></div></div>`).join(""):"<p>Nenhum evento futuro cadastrado.</p>";
 }
-async function checar(){
+(async()=>{
   const {data:{session}}=await db.auth.getSession();
-  $("login").hidden=!!session;$("painel").hidden=!session;
-  if(session)carregar();
-}
-$("entrar").onclick=async()=>{
-  msg("");
-  const {error}=await db.auth.signInWithPassword({email:$("email").value.trim(),password:$("senha").value});
-  if(error)return msg("E-mail ou senha incorretos.");
-  checar();
-};
-$("sair").onclick=async()=>{await db.auth.signOut();checar()};
+  if(!session)return location.href="entrar.html";
+  const {data:s}=await db.from("socios").select("user_id").eq("user_id",session.user.id).maybeSingle();
+  if(!s){$("bloq").hidden=false;return}
+  $("painel").hidden=false;carregar();
+})();
+$("sair").onclick=async()=>{await db.auth.signOut();location.href="./"};
 $("cancelar").onclick=()=>{limpar();msg()};
+$("img").onchange=()=>{const f=$("img").files[0];if(f){$("pv").src=URL.createObjectURL(f);$("pv").hidden=false}};
 $("salvar").onclick=async()=>{
   if(!$("titulo").value.trim()||!$("data").value||!$("local").value.trim())return msg("Preencha nome, data e local.");
-  const reg={titulo:$("titulo").value.trim(),data:$("data").value,hora:$("hora").value||null,local:$("local").value.trim(),link_ingresso:$("link").value.trim()||null,categoria:$("cat").value};
+  let url=imgAtual;const f=$("img").files[0];
+  if(f){
+    if(f.size>3e6)return msg("A imagem passa de 3 MB. Escolha uma menor.");
+    const ext=(f.name.split(".").pop()||"jpg").toLowerCase().replace(/[^a-z0-9]/g,"");
+    const path=crypto.randomUUID()+"."+ext;
+    const {error:ue}=await db.storage.from("imagens").upload(path,f);
+    if(ue)return msg("A imagem não foi enviada: "+ue.message);
+    url=db.storage.from("imagens").getPublicUrl(path).data.publicUrl;
+  }
+  const reg={titulo:$("titulo").value.trim(),data:$("data").value,hora:$("hora").value||null,local:$("local").value.trim(),link_ingresso:$("link").value.trim()||null,categoria:$("cat").value,imagem_url:url};
   const {error}=editId?await db.from("eventos").update(reg).eq("id",editId):await db.from("eventos").insert(reg);
   if(error)return msg("Não salvou: "+error.message);
   limpar();msg("Evento salvo.");carregar();
 };
 $("lista").onclick=async e=>{
   const ed=e.target.dataset.ed,ex=e.target.dataset.ex;
-  if(ed){const x=items.find(i=>i.id===ed);editId=ed;$("titulo").value=x.titulo;$("data").value=x.data;$("hora").value=x.hora?x.hora.slice(0,5):"";$("local").value=x.local;$("link").value=x.link_ingresso||"";$("cat").value=x.categoria;$("tit").textContent="Editar evento";scrollTo(0,0)}
+  if(ed){const x=items.find(i=>i.id===ed);editId=ed;imgAtual=x.imagem_url;$("titulo").value=x.titulo;$("data").value=x.data;$("hora").value=x.hora?x.hora.slice(0,5):"";$("local").value=x.local;$("link").value=x.link_ingresso||"";$("cat").value=x.categoria;$("pv").hidden=!x.imagem_url;if(x.imagem_url)$("pv").src=x.imagem_url;$("tit").textContent="Editar evento";scrollTo(0,0)}
   if(ex&&confirm("Excluir este evento?")){const {error}=await db.from("eventos").delete().eq("id",ex);msg(error?"Não excluiu: "+error.message:"Evento excluído.");carregar()}
 };
-checar();
 </script></body></html>
