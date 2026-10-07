@@ -16,7 +16,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="config.js"></script>
 <script>
-const db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY),$=id=>document.getElementById(id);
+const db=supabase.createClient(new URL(SUPABASE_URL.trim()).origin,SUPABASE_KEY.trim()),$=id=>document.getElementById(id);
 let novo=false;const msg=t=>$("msg").textContent=t||"";
 function modo(n){novo=n;$("t1").className=n?"":"on";$("t2").className=n?"on":"";$("ok").textContent=n?"Criar conta":"Entrar";$("tit").textContent=n?"Criar conta":"Entrar";msg()}
 $("t1").onclick=()=>modo(false);$("t2").onclick=()=>modo(true);
