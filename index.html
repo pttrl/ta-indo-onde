@@ -4,7 +4,7 @@
 <title>TIO — eventos da cidade</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="style.css?v=15"></head><body>
+<link rel="stylesheet" href="style.css?v=16"></head><body>
 <header class="bar"><div class="wrap"><a class="logo" href="./">TIO<i>.</i><small>tá indo onde?</small></a>
 <div class="dir"><div class="av"><button class="sino" id="sino" aria-label="Avisos" aria-expanded="false"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><i id="pt" hidden></i></button><div class="avmenu" id="avMenu" hidden></div></div>
 <nav id="nav"><a class="on" href="entrar.html">Entrar</a></nav></div></div></header>
@@ -113,7 +113,7 @@ function mostrarPerto(la,ln){
   if(!mapa){mapa=L.map("mapa");L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(mapa);camada=L.layerGroup().addTo(mapa)}
   camada.clearLayers();
   L.marker([la,ln],{icon:dot("eu")}).addTo(camada).bindPopup("Você está aqui");
-  l.forEach(({e,d})=>L.marker([e.lat,e.lng],{icon:dot("ev")}).addTo(camada).bindPopup(`<b>${esc(e.titulo)}</b><br>${esc(fmt(e.data,{day:"numeric",month:"short"}))} · ${e.hora?e.hora.slice(0,5):"horário a confirmar"}<br>${d.toFixed(1).replace(".",",")} km`));
+  l.forEach(({e,d})=>L.marker([e.lat,e.lng],{icon:dot("ev")}).addTo(camada).bindPopup(`<b>${esc(e.titulo)}</b><br>${e.endereco?esc(e.endereco)+"<br>":""}${esc(fmt(e.data,{day:"numeric",month:"short"}))} · ${e.hora?e.hora.slice(0,5):"horário a confirmar"}<br>${d.toFixed(1).replace(".",",")} km<br><a href="https://www.google.com/maps/dir/?api=1&destination=${e.lat},${e.lng}" target="_blank" rel="noopener">Como chegar</a>`));
   const pts=[[la,ln]].concat(l.slice(0,5).map(x=>[x.e.lat,x.e.lng]));
   setTimeout(()=>{mapa.invalidateSize();mapa.fitBounds(L.latLngBounds(pts).pad(.25),{maxZoom:15})},60);
   $("nTxt").textContent=l.length?"Os rolês mais próximos de você:":"Ainda não há eventos com localização no mapa.";
@@ -135,7 +135,7 @@ $("hab").onclick=e=>{const v=e.target.dataset.v;if(v===undefined)return;
   if(user){
     const {data:s}=await db.from("socios").select("user_id").eq("user_id",user.id).maybeSingle();
     const nome=(user.user_metadata?.nome||user.email.split("@")[0]).trim().split(" ")[0];
-    $("nav").innerHTML=(s?'<a href="admin.html" class="on">Painel</a>':"")+`<div class="um"><button class="oi" id="umBtn" aria-expanded="false">Oi, ${esc(nome)} ▾</button><div class="umenu" id="umMenu" hidden><span class="it0 off">Meu perfil <small>em breve</small></span><a class="it0" href="redefinir.html">Alterar senha</a><button class="it0" id="sair">Sair</button></div></div>`;
+    $("nav").innerHTML=(s?'<a href="admin.html" class="on">Painel</a>':"")+`<div class="um"><button class="oi" id="umBtn" aria-expanded="false">Oi, ${esc(nome)} ▾</button><div class="umenu" id="umMenu" hidden><a class="it0" href="perfil.html">Meu perfil</a><a class="it0" href="redefinir.html">Alterar senha</a><button class="it0" id="sair">Sair</button></div></div>`;
     $("umBtn").onclick=e=>{e.stopPropagation();const a=$("umMenu").hidden;$("umMenu").hidden=!a;$("umBtn").setAttribute("aria-expanded",String(a))};
     document.addEventListener("click",e=>{if(!e.target.closest(".um"))$("umMenu").hidden=true});
     document.addEventListener("keydown",e=>{if(e.key==="Escape")$("umMenu").hidden=true});
