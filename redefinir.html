@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>Nova senha — TIO</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=13"></head><body>
+<header class="bar"><div class="wrap"><a class="logo" href="./">TIO<i>.</i><small>tá indo onde?</small></a><nav><a href="./">Voltar</a></nav></div></header>
+<main class="page"><h1 style="font-size:2.2rem;margin:0 0 16px">Nova senha</h1>
+<p id="aviso" class="dica">Abra esta página pelo link que chegou no seu e-mail.</p>
+<div class="box" id="form" hidden>
+<label>Nova senha<input id="s1" type="password" autocomplete="new-password"></label>
+<label>Confirmar nova senha<input id="s2" type="password" autocomplete="new-password"></label>
+<p class="dica">Use pelo menos 8 caracteres.</p>
+<button class="btn" id="ok">Salvar nova senha</button></div>
+<p id="msg" role="status"></p></main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script>
+const db=supabase.createClient(new URL(SUPABASE_URL.trim()).origin,SUPABASE_KEY.trim()),$=id=>document.getElementById(id);
+const msg=t=>$("msg").textContent=t||"";
+const mostrar=()=>{$("form").hidden=false;$("aviso").hidden=true};
+db.auth.onAuthStateChange((ev,s)=>{if(s)mostrar()});
+db.auth.getSession().then(({data:{session}})=>{if(session)mostrar()});
+$("ok").onclick=async()=>{
+  const a=$("s1").value;msg();
+  if(a.length<8)return msg("A senha precisa ter pelo menos 8 caracteres.");
+  if(a!==$("s2").value)return msg("As senhas não são iguais.");
+  const {error}=await db.auth.updateUser({password:a});
+  if(error)return msg("Não foi possível salvar: "+error.message);
+  msg("Senha alterada! Levando você para o site...");setTimeout(()=>location.href="./",1600);
+};
+</script></body></html>

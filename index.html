@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>TIO — eventos da cidade</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=11"></head><body>
+<link rel="stylesheet" href="style.css?v=13"></head><body>
 <header class="bar"><div class="wrap"><a class="logo" href="./">TIO<i>.</i><small>tá indo onde?</small></a>
 <div class="dir"><div class="av"><button class="sino" id="sino" aria-label="Avisos" aria-expanded="false"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><i id="pt" hidden></i></button><div class="avmenu" id="avMenu" hidden></div></div>
 <nav id="nav"><a class="on" href="entrar.html">Entrar</a></nav></div></div></header>
@@ -83,7 +83,7 @@ const visto=()=>{try{return localStorage.getItem(LS)||""}catch{return ""}};
 const marcar=v=>{try{localStorage.setItem(LS,v)}catch{}};
 function quando(t){const m=(Date.now()-new Date(t))/6e4;if(m<60)return "há "+Math.max(1,Math.round(m))+" min";if(m<1440)return "há "+Math.round(m/60)+" h";return new Date(t).toLocaleDateString("pt-BR",{day:"numeric",month:"short"})}
 function renderAv(){
-  $("avMenu").innerHTML="<h3>Avisos</h3>"+(avisos.length?avisos.map(a=>`<div class="avi"><p>${esc(a.texto)}</p><small>${quando(a.criado_em)}</small></div>`).join(""):'<p class="vazio" style="padding:8px 16px">Nenhum aviso por enquanto.</p>');
+  $("avMenu").innerHTML="<h3>Avisos</h3>"+(avisos.length?avisos.map(a=>/^https?:\/\//i.test(a.link||"")?`<a class="avi" href="${esc(a.link)}" target="_blank" rel="noopener"><p>${esc(a.texto)}</p><small>${quando(a.criado_em)} · <b class="ir">Abrir link ↗</b></small></a>`:`<div class="avi"><p>${esc(a.texto)}</p><small>${quando(a.criado_em)}</small></div>`).join(""):'<p class="vazio" style="padding:8px 16px">Nenhum aviso por enquanto.</p>');
   $("pt").hidden=!(avisos.length&&new Date(avisos[0].criado_em)>new Date(visto()||0));
 }
 $("sino").onclick=e=>{e.stopPropagation();const abrir=$("avMenu").hidden;$("avMenu").hidden=!abrir;$("sino").setAttribute("aria-expanded",String(abrir));if(abrir&&avisos.length){marcar(avisos[0].criado_em);$("pt").hidden=true}};

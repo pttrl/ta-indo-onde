@@ -3,11 +3,13 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
 <title>Painel dos sócios — TIO</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=11"></head><body>
+<link rel="stylesheet" href="style.css?v=13"></head><body>
 <header class="bar"><div class="wrap"><a class="logo" href="./">TIO<i>.</i><small>tá indo onde?</small></a><nav><a href="./">Ver site</a><button id="sair">Sair</button></nav></div></header>
 <main class="page wide">
 <div id="bloq" hidden><h1>Acesso restrito</h1><p>Esta área é só para sócios. <a href="entrar.html">Entrar com outra conta</a></p></div>
 <div id="painel" hidden>
+<div class="abas" role="tablist"><button data-aba="0" class="on">Eventos</button><button data-aba="1">Avisos</button><button data-aba="2">Usuários</button></div>
+<section id="p1">
 <h1 id="tit" style="font-size:2rem;margin:0 0 16px">Novo evento</h1>
 <div class="box">
 <label>Nome do evento<input id="titulo"></label>
@@ -23,9 +25,18 @@
 <div class="row"><button class="btn" id="salvar">Salvar evento</button><button class="btn sec" id="cancelar">Limpar</button></div>
 </div>
 <h2 style="font-size:1.2rem">Eventos cadastrados</h2><div id="lista"></div>
-<h2 style="font-size:1.2rem">Avisos (aparecem no sino do site)</h2>
-<div class="box"><label>Texto do aviso (até 280 caracteres)<textarea id="avTxt" maxlength="280" rows="3"></textarea></label><button class="btn" id="avEnviar">Enviar aviso</button></div>
+</section>
+<section id="p2" hidden>
+<h1 style="font-size:2rem;margin:0 0 6px">Avisos</h1><p class="dica" style="margin-bottom:14px">Aparecem no sino do site para todo mundo.</p>
+<div class="box"><label>Texto do aviso (até 280 caracteres)<textarea id="avTxt" maxlength="280" rows="3"></textarea></label><label>Link do aviso (opcional)<input id="avLink" type="url" placeholder="https://"></label><button class="btn" id="avEnviar">Enviar aviso</button></div>
 <div id="avLista"></div>
+</section>
+<section id="p3" hidden>
+<h1 style="font-size:2rem;margin:0 0 6px">Usuários</h1><p class="dica" style="margin-bottom:14px">Pessoas que criaram conta no TIO.</p>
+<div class="box"><label>Buscar por nome ou e-mail<input id="uBusca"></label>
+<div class="row"><button class="btn sec" id="uCopiar">Copiar e-mails com promoções</button><button class="btn sec" id="uRecarregar">Atualizar lista</button></div></div>
+<p class="dica" id="uTotal" style="margin-top:12px"></p><div id="uLista"></div>
+</section>
 </div><p id="msg" role="status"></p></main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="config.js"></script>
@@ -45,17 +56,47 @@ async function carregar(){
 async function carregarAv(){
   const {data,error}=await db.from("avisos").select("*").order("criado_em",{ascending:false}).limit(20);
   if(error)return msg("Erro ao carregar avisos: "+error.message);
-  $("avLista").innerHTML=data.length?data.map(a=>`<div class="it"><div><b>${esc(a.texto)}</b><small>${new Date(a.criado_em).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"})}</small></div><div><button class="btn sec" data-avx="${a.id}">Excluir</button></div></div>`).join(""):"<p>Nenhum aviso enviado ainda.</p>";
+  $("avLista").innerHTML=data.length?data.map(a=>`<div class="it"><div><b>${esc(a.texto)}</b>${a.link?`<small>🔗 ${esc(a.link)}</small>`:""}<small>${new Date(a.criado_em).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"})}</small></div><div><button class="btn sec" data-avx="${a.id}">Excluir</button></div></div>`).join(""):"<p>Nenhum aviso enviado ainda.</p>";
 }
 $("avEnviar").onclick=async()=>{
   const texto=$("avTxt").value.trim();if(!texto)return msg("Escreva o aviso antes de enviar.");
-  const {error}=await db.from("avisos").insert({texto});
+  const link=$("avLink").value.trim();
+  if(link&&!/^https?:\/\//i.test(link))return msg("O link precisa começar com https://");
+  const {error}=await db.from("avisos").insert({texto,link:link||null});
   if(error)return msg("Não enviou: "+error.message);
-  $("avTxt").value="";msg("Aviso enviado.");carregarAv();
+  $("avTxt").value="";$("avLink").value="";msg("Aviso enviado.");carregarAv();
 };
 $("avLista").onclick=async e=>{
   const id=e.target.dataset.avx;
   if(id&&confirm("Excluir este aviso?")){const {error}=await db.from("avisos").delete().eq("id",id);msg(error?"Não excluiu: "+error.message:"Aviso excluído.");carregarAv()}
+};
+
+function aba(n){["p1","p2","p3"].forEach((p,i)=>$(p).hidden=i!==n);document.querySelectorAll(".abas button").forEach((b,i)=>b.classList.toggle("on",i===n));if(n===2&&!users.length)carregarUsers();msg()}
+document.querySelector(".abas").onclick=e=>{const n=e.target.dataset.aba;if(n!==undefined)aba(+n)};
+let users=[],socios=new Set();
+async function carregarUsers(){
+  const [p,s]=await Promise.all([db.from("perfis").select("*").order("criado_em",{ascending:false}),db.from("socios").select("user_id")]);
+  if(p.error)return msg("Erro ao carregar usuários: "+p.error.message);
+  users=p.data;socios=new Set((s.data||[]).map(x=>x.user_id));renderU();
+}
+function renderU(){
+  const q=$("uBusca").value.trim().toLowerCase();
+  const f=users.filter(u=>!q||(u.nome||"").toLowerCase().includes(q)||(u.email||"").toLowerCase().includes(q));
+  $("uTotal").textContent=f.length+" de "+users.length+" usuários";
+  $("uLista").innerHTML=f.length?f.map(u=>`<div class="it"><div><b>${esc(u.nome||"(sem nome)")}</b>${socios.has(u.user_id)?'<span class="tg">Sócio</span>':""}${u.aceita_promocoes?'<span class="tg">Promoções</span>':""}<small>${esc(u.email)} · desde ${new Date(u.criado_em).toLocaleDateString("pt-BR")}</small></div><div><button class="btn sec" data-rs="${u.user_id}">Redefinir senha</button></div></div>`).join(""):"<p>Nenhum usuário encontrado.</p>";
+}
+$("uBusca").oninput=renderU;$("uRecarregar").onclick=carregarUsers;
+$("uCopiar").onclick=async()=>{
+  const l=users.filter(u=>u.aceita_promocoes&&u.email).map(u=>u.email);
+  if(!l.length)return msg("Ninguém aceitou receber promoções ainda.");
+  try{await navigator.clipboard.writeText(l.join(", "));msg(l.length+" e-mail(s) copiado(s).")}catch{msg("Não consegui copiar automaticamente.")}
+};
+$("uLista").onclick=async e=>{
+  const id=e.target.dataset.rs;if(!id)return;
+  const u=users.find(x=>x.user_id===id);
+  if(!u||!confirm("Enviar e-mail de redefinição de senha para "+u.email+"?"))return;
+  const {error}=await db.auth.resetPasswordForEmail(u.email,{redirectTo:new URL("redefinir.html",location.href).href});
+  msg(error?"Não enviou: "+error.message:"E-mail de redefinição enviado para "+u.email+".");
 };
 
 (async()=>{
