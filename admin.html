@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
 <title>Painel dos sócios — TIO</title>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=7"></head><body>
+<link rel="stylesheet" href="style.css?v=8"></head><body>
 <header class="bar"><div class="wrap"><a class="logo" href="./">TIO<i>.</i><small>tá indo onde?</small></a><nav><a href="./">Ver site</a><button id="sair">Sair</button></nav></div></header>
 <main class="page wide">
 <div id="bloq" hidden><h1>Acesso restrito</h1><p>Esta área é só para sócios. <a href="entrar.html">Entrar com outra conta</a></p></div>
@@ -15,6 +15,9 @@
 <label>Local<input id="local"></label>
 <label>Link para comprar ingresso<input id="link" type="url" placeholder="https://"></label>
 <label>Categoria<select id="cat"><option>Balada</option><option>Show</option><option>Festa</option><option>Bar</option><option>Cultura</option><option>Outros</option></select></label>
+<label class="ck"><input type="checkbox" id="vip"><span>Tem Lista VIP</span></label>
+<label class="ck"><input type="checkbox" id="cupom"><span>Tem cupom de desconto</span></label>
+<label class="ck"><input type="checkbox" id="dest"><span>Destaque (aparece em "Bombando")</span></label>
 <label>Imagem do evento (até 3 MB)<input id="img" type="file" accept="image/*"></label>
 <img id="pv" class="pv" alt="" hidden>
 <div class="row"><button class="btn" id="salvar">Salvar evento</button><button class="btn sec" id="cancelar">Limpar</button></div>
@@ -29,7 +32,7 @@ const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&
 const msg=t=>$("msg").textContent=t||"";
 const iso=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 let items=[],editId=null,imgAtual=null;
-function limpar(){editId=null;imgAtual=null;["titulo","data","hora","local","link","img"].forEach(i=>$(i).value="");$("cat").value="Balada";$("pv").hidden=true;$("tit").textContent="Novo evento"}
+function limpar(){editId=null;imgAtual=null;["titulo","data","hora","local","link","img"].forEach(i=>$(i).value="");$("cat").value="Balada";["vip","cupom","dest"].forEach(i=>$(i).checked=false);$("pv").hidden=true;$("tit").textContent="Novo evento"}
 async function carregar(){
   const {data,error}=await db.from("eventos").select("*").gte("data",iso(new Date())).order("data").order("hora");
   if(error)return msg("Erro ao carregar: "+error.message);
@@ -57,14 +60,14 @@ $("salvar").onclick=async()=>{
     if(ue)return msg("A imagem não foi enviada: "+ue.message);
     url=db.storage.from("imagens").getPublicUrl(path).data.publicUrl;
   }
-  const reg={titulo:$("titulo").value.trim(),data:$("data").value,hora:$("hora").value||null,local:$("local").value.trim(),link_ingresso:$("link").value.trim()||null,categoria:$("cat").value,imagem_url:url};
+  const reg={titulo:$("titulo").value.trim(),data:$("data").value,hora:$("hora").value||null,local:$("local").value.trim(),link_ingresso:$("link").value.trim()||null,categoria:$("cat").value,imagem_url:url,lista_vip:$("vip").checked,cupom:$("cupom").checked,destaque:$("dest").checked};
   const {error}=editId?await db.from("eventos").update(reg).eq("id",editId):await db.from("eventos").insert(reg);
   if(error)return msg("Não salvou: "+error.message);
   limpar();msg("Evento salvo.");carregar();
 };
 $("lista").onclick=async e=>{
   const ed=e.target.dataset.ed,ex=e.target.dataset.ex;
-  if(ed){const x=items.find(i=>i.id===ed);editId=ed;imgAtual=x.imagem_url;$("titulo").value=x.titulo;$("data").value=x.data;$("hora").value=x.hora?x.hora.slice(0,5):"";$("local").value=x.local;$("link").value=x.link_ingresso||"";$("cat").value=x.categoria;$("pv").hidden=!x.imagem_url;if(x.imagem_url)$("pv").src=x.imagem_url;$("tit").textContent="Editar evento";scrollTo(0,0)}
+  if(ed){const x=items.find(i=>i.id===ed);editId=ed;imgAtual=x.imagem_url;$("titulo").value=x.titulo;$("data").value=x.data;$("hora").value=x.hora?x.hora.slice(0,5):"";$("local").value=x.local;$("link").value=x.link_ingresso||"";$("cat").value=x.categoria;$("vip").checked=!!x.lista_vip;$("cupom").checked=!!x.cupom;$("dest").checked=!!x.destaque;$("pv").hidden=!x.imagem_url;if(x.imagem_url)$("pv").src=x.imagem_url;$("tit").textContent="Editar evento";scrollTo(0,0)}
   if(ex&&confirm("Excluir este evento?")){const {error}=await db.from("eventos").delete().eq("id",ex);msg(error?"Não excluiu: "+error.message:"Evento excluído.");carregar()}
 };
 </script></body></html>

@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>TIO — eventos da cidade</title>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=7"></head><body>
+<link rel="stylesheet" href="style.css?v=8"></head><body>
 <header class="bar"><div class="wrap"><a class="logo" href="./">TIO<i>.</i><small>tá indo onde?</small></a>
 <nav id="nav"><a class="on" href="entrar.html">Entrar</a></nav></div></header>
 <main class="wrap">
@@ -18,6 +18,7 @@
 </div>
 <a class="btn" id="cta" href="entrar.html?novo=1">Criar minha conta</a>
 </section>
+<section id="bomba" hidden><h2>Bombando</h2><div class="rail" id="rail"></div></section>
 <section class="hero"><p id="dataSel"></p><h2 id="h1" class="dia-t">O que rola hoje</h2></section>
 <div class="days" id="dias" aria-label="Escolha um dia"></div>
 <label class="outra">Outra data: <input type="date" id="outra"></label>
@@ -35,11 +36,12 @@ const fmt=(s,o)=>new Date(s+"T00:00").toLocaleDateString("pt-BR",o);
 const okUrl=u=>/^https:\/\/[^\s'"()\\]+$/.test(u||"");
 const EMO={Balada:"🪩",Show:"🎸",Festa:"🎉",Bar:"🍸",Cultura:"🎭",Outros:"✨"};
 const hoje=iso(new Date());let ev=[],favs=new Set(),user=null,filtro="Todos",sel=hoje;
-function card(e,showDate){
+function card(e,sd){
   const img=okUrl(e.imagem_url),f=favs.has(e.id),ok=/^https?:\/\//i.test(e.link_ingresso||"");
-  return `<article class="card"><div class="img" data-c="${esc(e.categoria)}" ${img?`style="background-image:url('${e.imagem_url}')"`:""}>${img?"":EMO[e.categoria]||"✨"}<button class="fav${f?" on":""}" data-f="${e.id}" aria-label="Quero ir">${f?"♥":"♡"}</button></div>
-  <div class="body"><span class="tag">${esc(e.categoria)}</span><h3>${esc(e.titulo)}</h3>
-  <p class="when">${showDate?esc(fmt(e.data,{weekday:"short",day:"numeric",month:"short"}))+" · ":""}${e.hora?e.hora.slice(0,5):"Horário a confirmar"}</p><p>${esc(e.local)}</p>
+  return `<article class="card"><div class="img" data-c="${esc(e.categoria)}" ${img?`style="background-image:url('${e.imagem_url}')"`:""}>${img?"":EMO[e.categoria]||"✨"}</div><div class="shade"></div>
+  <div class="tags"><em class="k">${esc(e.categoria)}</em>${e.lista_vip?"<em>Lista VIP</em>":""}${e.cupom?'<em class="c">Cupom</em>':""}</div>
+  <button class="fav${f?" on":""}" data-f="${e.id}" aria-label="Quero ir">${f?"♥":"♡"}</button>
+  <div class="body"><p class="when">${sd?esc(fmt(e.data,{weekday:"short",day:"numeric",month:"short"}))+" · ":""}${e.hora?e.hora.slice(0,5):"Horário a confirmar"}</p><h3>${esc(e.titulo)}</h3><p>${esc(e.local)}</p>
   ${ok?`<a class="btn" href="${esc(e.link_ingresso)}" target="_blank" rel="noopener">Comprar ingresso</a>`:""}</div></article>`;
 }
 const lista=(a,sd,m)=>a.length?a.map(e=>card(e,sd)).join(""):`<div class="vazio">${m}</div>`;
@@ -49,7 +51,7 @@ function strip(){
   $("dias").innerHTML=ds.map(k=>{
     const d=new Date(k+"T00:00"),n=ev.filter(e=>e.data===k).length,g=d.getDay();
     const wd=d.toLocaleDateString("pt-BR",{weekday:"short"}).replace(".",""),mes=d.toLocaleDateString("pt-BR",{month:"short"}).replace(".","");
-    return `<button class="day${k===sel?" sel":""}${g===5||g===6?" fds":""}${k===hoje?" hj":""}" data-d="${k}"><span class="w">${k===hoje?"Hoje":wd}</span><b>${d.getDate()}</b><span class="m">${mes}</span><span class="n${n?" on":""}">${n?n+(n>1?" rolês":" rolê"):"livre"}</span></button>`}).join("");
+    return `<button class="day${k===sel?" sel":""}${g===5||g===6?" fds":""}${k===hoje?" hj":""}" data-d="${k}"><span class="w">${k===hoje?"Hoje":wd}</span><b>${d.getDate()}</b><span class="m">${mes}</span><span class="n${n?" on":""}">${n?"🔥 "+n+(n>1?" rolês":" rolê"):"livre"}</span></button>`}).join("");
 }
 function render(){
   $("dataSel").textContent=fmt(sel,{weekday:"long",day:"numeric",month:"long"});
@@ -59,6 +61,7 @@ function render(){
   $("chips").innerHTML=cats.map(c=>`<button data-k="${c}" class="${c===filtro?"on":""}">${c==="Favoritos"?"♥ Quero ir":c}</button>`).join("");
   const f=ev.filter(e=>e.data>hoje&&(filtro==="Todos"||(filtro==="Favoritos"?favs.has(e.id):e.categoria===filtro)));
   $("feed").innerHTML=lista(f.slice(0,40),true,"Nenhum evento encontrado nesta seleção.");
+  const dest=ev.filter(e=>e.destaque).slice(0,10);$("bomba").hidden=!dest.length;$("rail").innerHTML=dest.map(e=>card(e,true)).join("");
   strip();
 }
 document.addEventListener("click",async e=>{
