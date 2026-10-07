@@ -94,3 +94,16 @@ a.avi{display:block;text-decoration:none;color:inherit}a.avi:hover{background:va
 .abas button{font:inherit;font-weight:600;color:var(--mut);background:none;border:0;border-bottom:3px solid transparent;padding:10px 16px;cursor:pointer;white-space:nowrap}
 .abas .on{color:var(--ink);border-bottom-color:var(--acc)}
 .tg{font-size:.7rem;font-weight:600;border:1px solid var(--line);border-radius:99px;padding:1px 8px;color:var(--mut);margin-left:4px;vertical-align:middle}
+
+/* mapa e menu do usuário */
+#mapa,#mapaAdm{height:380px;border-radius:18px;border:1px solid var(--line);margin-top:12px;overflow:hidden;isolation:isolate}
+#mapaAdm{height:240px;border-radius:12px}
+#mapa .leaflet-tile-pane,#mapaAdm .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.9) contrast(.9) saturate(.5)}
+.leaflet-container{font-family:inherit}
+.pin{display:block;width:20px;height:20px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 3px rgba(0,0,0,.35)}
+.pin.ev{background:var(--accl)}.pin.eu{background:#3B82F6}
+.hab{margin-top:28px}
+.um{position:relative}
+.umenu{position:absolute;right:0;top:46px;min-width:220px;background:var(--s);border:1px solid var(--line);border-radius:16px;box-shadow:0 18px 40px rgba(0,0,0,.45);padding:6px;z-index:10;display:grid}
+.it0{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:10px 12px;border-radius:10px;font:inherit;color:var(--ink);background:none;border:0;text-align:left;text-decoration:none;cursor:pointer}
+.it0:hover{background:var(--s2)}.it0.off{color:var(--mut);cursor:default}.it0.off:hover{background:none}.it0 small{font-size:.75rem;color:var(--mut)}
