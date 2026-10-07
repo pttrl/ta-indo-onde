@@ -64,3 +64,6 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 .day.sel .w,.day.sel .m{color:#fff}.day.sel .n,.day.sel .n.on{background:rgba(255,255,255,.28);color:#fff}
 .outra{display:flex;align-items:center;gap:10px;color:var(--mut);margin-bottom:20px;font-size:.95rem}.outra input{padding:6px 10px}
 @media(prefers-reduced-motion:reduce){.day{transition:none}.day.sel{transform:none}}
+.ck{display:flex;gap:10px;align-items:flex-start;color:var(--ink);font-size:.9rem;line-height:1.4}
+.ck input{width:20px;height:20px;margin-top:1px;flex:none;accent-color:var(--acc)}
+.ck a{color:var(--acc)}.dica{color:var(--mut);margin:0;font-size:.85rem}
