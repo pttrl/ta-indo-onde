@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
 <title>Painel dos sócios — TIO</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=10"></head><body>
+<link rel="stylesheet" href="style.css?v=11"></head><body>
 <header class="bar"><div class="wrap"><a class="logo" href="./">TIO<i>.</i><small>tá indo onde?</small></a><nav><a href="./">Ver site</a><button id="sair">Sair</button></nav></div></header>
 <main class="page wide">
 <div id="bloq" hidden><h1>Acesso restrito</h1><p>Esta área é só para sócios. <a href="entrar.html">Entrar com outra conta</a></p></div>
@@ -23,6 +23,9 @@
 <div class="row"><button class="btn" id="salvar">Salvar evento</button><button class="btn sec" id="cancelar">Limpar</button></div>
 </div>
 <h2 style="font-size:1.2rem">Eventos cadastrados</h2><div id="lista"></div>
+<h2 style="font-size:1.2rem">Avisos (aparecem no sino do site)</h2>
+<div class="box"><label>Texto do aviso (até 280 caracteres)<textarea id="avTxt" maxlength="280" rows="3"></textarea></label><button class="btn" id="avEnviar">Enviar aviso</button></div>
+<div id="avLista"></div>
 </div><p id="msg" role="status"></p></main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="config.js"></script>
@@ -39,12 +42,28 @@ async function carregar(){
   items=data;
   $("lista").innerHTML=items.length?items.map(e=>`<div class="it"><div><b>${esc(e.titulo)}</b><small>${esc(e.data.split("-").reverse().join("/"))} ${e.hora?e.hora.slice(0,5):""} · ${esc(e.local)}</small></div><div><button class="btn sec" data-ed="${e.id}">Editar</button><button class="btn sec" data-ex="${e.id}">Excluir</button></div></div>`).join(""):"<p>Nenhum evento futuro cadastrado.</p>";
 }
+async function carregarAv(){
+  const {data,error}=await db.from("avisos").select("*").order("criado_em",{ascending:false}).limit(20);
+  if(error)return msg("Erro ao carregar avisos: "+error.message);
+  $("avLista").innerHTML=data.length?data.map(a=>`<div class="it"><div><b>${esc(a.texto)}</b><small>${new Date(a.criado_em).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"})}</small></div><div><button class="btn sec" data-avx="${a.id}">Excluir</button></div></div>`).join(""):"<p>Nenhum aviso enviado ainda.</p>";
+}
+$("avEnviar").onclick=async()=>{
+  const texto=$("avTxt").value.trim();if(!texto)return msg("Escreva o aviso antes de enviar.");
+  const {error}=await db.from("avisos").insert({texto});
+  if(error)return msg("Não enviou: "+error.message);
+  $("avTxt").value="";msg("Aviso enviado.");carregarAv();
+};
+$("avLista").onclick=async e=>{
+  const id=e.target.dataset.avx;
+  if(id&&confirm("Excluir este aviso?")){const {error}=await db.from("avisos").delete().eq("id",id);msg(error?"Não excluiu: "+error.message:"Aviso excluído.");carregarAv()}
+};
+
 (async()=>{
   const {data:{session}}=await db.auth.getSession();
   if(!session)return location.href="entrar.html";
   const {data:s}=await db.from("socios").select("user_id").eq("user_id",session.user.id).maybeSingle();
   if(!s){$("bloq").hidden=false;return}
-  $("painel").hidden=false;carregar();
+  $("painel").hidden=false;carregar();carregarAv();
 })();
 $("sair").onclick=async()=>{await db.auth.signOut();location.href="./"};
 $("cancelar").onclick=()=>{limpar();msg()};
