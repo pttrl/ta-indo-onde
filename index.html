@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>TIO — eventos da cidade</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=9"></head><body>
+<link rel="stylesheet" href="style.css?v=10"></head><body>
 <header class="bar"><div class="wrap"><a class="logo" href="./">TIO<i>.</i><small>tá indo onde?</small></a>
 <nav id="nav"><a class="on" href="entrar.html">Entrar</a></nav></div></header>
 <main class="wrap">
@@ -51,7 +51,7 @@ function strip(){
   $("dias").innerHTML=ds.map(k=>{
     const d=new Date(k+"T00:00"),n=ev.filter(e=>e.data===k).length,g=d.getDay();
     const wd=d.toLocaleDateString("pt-BR",{weekday:"short"}).replace(".",""),mes=d.toLocaleDateString("pt-BR",{month:"short"}).replace(".","");
-    return `<button class="day${k===sel?" sel":""}${g===5||g===6?" fds":""}${k===hoje?" hj":""}" data-d="${k}"><span class="w">${k===hoje?"Hoje":wd}</span><b>${d.getDate()}</b><span class="m">${mes}</span><span class="n${n?" on":""}">${n?n+(n>1?" rolês":" rolê"):"livre"}</span></button>`}).join("");
+    return `<button class="day${k===sel?" sel":""}${g===5||g===6?" fds":""}${k===hoje?" hj":""}" data-d="${k}" aria-label="${fmt(k,{weekday:"long",day:"numeric",month:"long"})}${n?`, ${n} ${n>1?"eventos":"evento"}`:""}"><span class="fire">${n?"🔥":""}</span><span class="w">${k===hoje?"Hoje":wd}</span><b>${d.getDate()}</b><span class="m">${mes}</span><span class="n${n?" on":""}">${n?"★ "+n:"livre"}</span></button>`}).join("");
 }
 function render(){
   $("dataSel").textContent=fmt(sel,{weekday:"long",day:"numeric",month:"long"});
