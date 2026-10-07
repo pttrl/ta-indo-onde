@@ -3,11 +3,12 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Entrar — TIO</title>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=5"></head><body>
+<link rel="stylesheet" href="style.css?v=6"></head><body>
 <header class="bar"><div class="wrap"><a class="logo" href="./">TIO<i>.</i><small>tá indo onde?</small></a><nav><a href="./">Voltar</a></nav></div></header>
 <main class="page"><h1 id="tit" style="font-size:2.4rem;margin:0 0 16px">Entrar</h1>
 <div class="box">
 <div class="tabs"><button id="t1" class="on">Já tenho conta</button><button id="t2">Criar conta</button></div>
+<label id="nomeBox" style="display:none">Seu nome<input id="nome" autocomplete="name" maxlength="60" placeholder="Como quer ser chamado(a)?"></label>
 <label>E-mail<input id="email" type="email" autocomplete="username"></label>
 <label>Senha<input id="senha" type="password" autocomplete="current-password"></label>
 <div id="extra" hidden style="display:none;gap:12px">
@@ -24,7 +25,7 @@
 const db=supabase.createClient(new URL(SUPABASE_URL.trim()).origin,SUPABASE_KEY.trim()),$=id=>document.getElementById(id);
 let novo=false;const msg=t=>$("msg").textContent=t||"";
 function modo(n){novo=n;$("t1").className=n?"":"on";$("t2").className=n?"on":"";$("ok").textContent=n?"Criar minha conta":"Entrar";$("tit").textContent=n?"Criar conta":"Entrar";
-  $("extra").style.display=n?"grid":"none";$("senha").autocomplete=n?"new-password":"current-password";msg()}
+  $("extra").style.display=n?"grid":"none";$("nomeBox").style.display=n?"grid":"none";$("senha").autocomplete=n?"new-password":"current-password";msg()}
 $("t1").onclick=()=>modo(false);$("t2").onclick=()=>modo(true);
 async function seguir(user){
   const {data:s,error}=await db.from("socios").select("user_id").eq("user_id",user.id).maybeSingle();
@@ -35,10 +36,12 @@ $("ok").onclick=async()=>{
   msg();const email=$("email").value.trim(),password=$("senha").value;
   if(!/^\S+@\S+\.\S+$/.test(email))return msg("Digite um e-mail válido.");
   if(novo){
+    const nome=$("nome").value.trim().replace(/\s+/g," ");
+    if(nome.length<2)return msg("Digite seu nome.");
     if(password.length<8)return msg("A senha precisa ter pelo menos 8 caracteres.");
     if(password!==$("senha2").value)return msg("As senhas não são iguais.");
     if(!$("termos").checked)return msg("Para criar a conta, aceite os Termos de Serviço.");
-    const {data,error}=await db.auth.signUp({email,password,options:{data:{aceitou_termos_em:new Date().toISOString(),aceita_promocoes:$("promo").checked}}});
+    const {data,error}=await db.auth.signUp({email,password,options:{data:{nome,aceitou_termos_em:new Date().toISOString(),aceita_promocoes:$("promo").checked}}});
     if(error)return msg("Não foi possível criar a conta: "+error.message);
     if(data.user&&data.user.identities&&data.user.identities.length===0)return msg("Este e-mail já tem conta. Use a aba \"Já tenho conta\".");
     if(!data.session)return msg("Conta criada! Confirme pelo link enviado ao seu e-mail e depois entre.");
@@ -49,5 +52,6 @@ $("ok").onclick=async()=>{
   if(error)return msg(/confirm/i.test(error.message)?"Confirme seu e-mail pelo link que o Supabase enviou e depois entre.":"E-mail ou senha incorretos. ("+error.message+")");
   seguir(data.user);
 };
+if(new URLSearchParams(location.search).get("novo"))modo(true);
 db.auth.getSession().then(({data:{session}})=>{if(session)seguir(session.user)});
 </script></body></html>

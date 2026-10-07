@@ -3,11 +3,22 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>TIO — eventos da cidade</title>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=5"></head><body>
+<link rel="stylesheet" href="style.css?v=6"></head><body>
 <header class="bar"><div class="wrap"><a class="logo" href="./">TIO<i>.</i><small>tá indo onde?</small></a>
 <nav id="nav"><a class="on" href="entrar.html">Entrar</a></nav></div></header>
 <main class="wrap">
-<section class="hero"><p id="dataSel"></p><h1 id="h1">O que rola hoje</h1></section>
+<section class="intro">
+<p class="eyebrow">Rio de Janeiro</p>
+<h1>Todo rolê do Rio, <span>num lugar só.</span></h1>
+<p class="lead">Lista VIP, cupom de desconto e a agenda completa da cidade. Fica antenado no que vai bombar e chega já sabendo pra onde ir.</p>
+<div class="feats">
+<div><b>🎟️ Listas VIP</b><span>Nome na lista de festas e baladas.</span></div>
+<div><b>🏷️ Códigos de desconto</b><span>Ingresso mais barato pra quem tá dentro.</span></div>
+<div><b>📍 Eventos do Rio</b><span>Show, balada, bar e cultura, tudo junto.</span></div>
+</div>
+<a class="btn" id="cta" href="entrar.html?novo=1">Criar minha conta</a>
+</section>
+<section class="hero"><p id="dataSel"></p><h2 id="h1" class="dia-t">O que rola hoje</h2></section>
 <div class="days" id="dias" aria-label="Escolha um dia"></div>
 <label class="outra">Outra data: <input type="date" id="outra"></label>
 <div class="grid" id="dia"></div>
@@ -67,7 +78,9 @@ $("outra").onchange=e=>{if(e.target.value&&e.target.value>=hoje){sel=e.target.va
   const {data:{session}}=await db.auth.getSession();user=session?.user||null;
   if(user){
     const {data:s}=await db.from("socios").select("user_id").eq("user_id",user.id).maybeSingle();
-    $("nav").innerHTML=(s?'<a href="admin.html" class="on">Painel</a>':"")+'<button id="sair">Sair</button>';
+    const nome=(user.user_metadata?.nome||user.email.split("@")[0]).trim().split(" ")[0];
+    $("nav").innerHTML=(s?'<a href="admin.html" class="on">Painel</a>':`<span class="oi">Oi, ${esc(nome)}</span>`)+'<button id="sair">Sair</button>';
+    $("cta")?.remove();
     $("sair").onclick=async()=>{await db.auth.signOut();location.reload()};
     const {data:f}=await db.from("favoritos").select("evento_id");favs=new Set((f||[]).map(x=>x.evento_id));
   }
