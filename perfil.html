@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
 <title>Meu perfil — TIO</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=19"></head><body>
+<link rel="stylesheet" href="style.css?v=20"></head><body>
 <header class="bar"><div class="wrap"><a class="logo" href="./">TIO<i>.</i><small>tá indo onde?</small></a><nav><a href="./">Voltar</a></nav></div></header>
 <main class="page"><h1 style="font-size:2.2rem;margin:0 0 16px">Meu perfil</h1>
 <div class="box" id="cx" hidden>
@@ -12,6 +12,7 @@
 <label>Nome<input id="nome" maxlength="60" autocomplete="name"></label>
 <label>E-mail<input id="email" disabled></label>
 <label class="ck"><input type="checkbox" id="promo"><span>Quero receber promoções e novidades de eventos por e-mail.</span></label>
+<label class="ck"><input type="checkbox" id="loc"><span>Compartilhar minha área aproximada com o TIO (opcional). Guardamos só uma posição arredondada, de cerca de 1 km, para saber onde há mais gente e trazer eventos mais relevantes.</span></label>
 <button class="btn" id="salvar">Salvar alterações</button>
 <a href="redefinir.html" style="color:var(--accl)">Alterar minha senha</a>
 </div><p id="msg" role="status"></p></main>
@@ -32,7 +33,7 @@ function pintar(){
   if(!session)return location.href="entrar.html";
   user=session.user;
   const {data:p}=await db.from("perfis").select("*").eq("user_id",user.id).maybeSingle();
-  $("nome").value=p?.nome||user.user_metadata?.nome||"";$("email").value=user.email;$("promo").checked=!!p?.aceita_promocoes;
+  $("nome").value=p?.nome||user.user_metadata?.nome||"";$("email").value=user.email;$("promo").checked=!!p?.aceita_promocoes;$("loc").checked=!!p?.compartilha_local;
   fotoUrl=p?.foto_url||null;pintar();$("cx").hidden=false;
 })();
 $("nome").oninput=pintar;
@@ -63,8 +64,9 @@ $("rmFoto").onclick=async()=>{
 $("salvar").onclick=async()=>{
   const nome=$("nome").value.trim().replace(/\s+/g," ");
   if(nome.length<2)return msg("Digite seu nome.");
-  const {error}=await db.from("perfis").upsert({user_id:user.id,email:user.email,nome,aceita_promocoes:$("promo").checked},{onConflict:"user_id"});
+  const {error}=await db.from("perfis").upsert({user_id:user.id,email:user.email,nome,aceita_promocoes:$("promo").checked,compartilha_local:$("loc").checked},{onConflict:"user_id"});
   if(error)return msg("Não salvou: "+error.message);
+  if(!$("loc").checked)await db.from("localizacoes").delete().eq("user_id",user.id);
   await db.auth.updateUser({data:{nome}});
   pintar();msg("Perfil salvo!");
 };

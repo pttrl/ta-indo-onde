@@ -4,12 +4,12 @@
 <title>Painel admin — TIO</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="style.css?v=19"></head><body>
+<link rel="stylesheet" href="style.css?v=20"></head><body>
 <header class="bar"><div class="wrap"><a class="logo" href="./">TIO<i>.</i><small>tá indo onde?</small></a><nav><a href="./">Ver site</a><button id="sair">Sair</button></nav></div></header>
 <main class="page wide">
 <div id="bloq" hidden><h1>Acesso restrito</h1><p>Esta área é só para admins. <a href="entrar.html">Entrar com outra conta</a></p></div>
 <div id="painel" hidden>
-<div class="abas" role="tablist"><button data-aba="0" class="on">Eventos</button><button data-aba="1">Avisos</button><button data-aba="2">Usuários</button></div>
+<div class="abas" role="tablist"><button data-aba="0" class="on">Eventos</button><button data-aba="1">Avisos</button><button data-aba="2">Usuários</button><button data-aba="3">Áreas</button></div>
 <section id="p1">
 <h1 id="tit" style="font-size:2rem;margin:0 0 16px">Novo evento</h1>
 <div class="box">
@@ -19,6 +19,7 @@
 <label>Endereço (rua, número, bairro)<input id="end" placeholder="Ex.: Rua Teixeira de Melo, 31, Ipanema"></label>
 <div class="row"><button class="btn sec" type="button" id="geo">Buscar endereço no mapa</button><span class="dica" id="geoTxt" style="align-self:center">Opcional: marque onde fica.</span></div>
 <div id="geoRes"></div>
+<div class="row"><input id="coord" placeholder="Ou cole coordenadas: -22.9068, -43.1729"><button class="btn sec" type="button" id="coordOk">Usar coordenadas</button></div>
 <div id="mapaAdm"></div><input type="hidden" id="lat"><input type="hidden" id="lng">
 <label>Link para comprar ingresso<input id="link" type="url" placeholder="https://"></label>
 <label>Categoria<select id="cat"><option>Balada</option><option>Show</option><option>Festa</option><option>Bar</option><option>Cultura</option><option>Outros</option></select></label>
@@ -42,6 +43,11 @@
 <div class="box"><label>Buscar por nome ou e-mail<input id="uBusca"></label>
 <div class="row"><button class="btn sec" id="uCopiar">Copiar e-mails com promoções</button><button class="btn sec" id="uRecarregar">Atualizar lista</button></div></div>
 <p class="dica" id="uTotal" style="margin-top:12px"></p><div id="uLista"></div>
+</section>
+<section id="p4" hidden>
+<h1 style="font-size:2rem;margin:0 0 6px">Áreas</h1><p class="dica" style="margin-bottom:14px">De onde vêm as pessoas que compartilharam a área aproximada (só totais por região, sem nomes). Círculo vermelho = há gente e nenhum evento cadastrado por perto.</p>
+<p class="dica" id="arTotal"></p><div id="mapaAreas"></div>
+<h2 style="font-size:1.2rem">Onde procurar mais eventos</h2><div id="arLista"></div>
 </section>
 </div><p id="msg" role="status"></p></main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
@@ -69,38 +75,68 @@ function ponto(la,ln,z){
 function iniciarMapa(){
   if(mA)return;
   mA=L.map("mapaAdm").setView([-22.9068,-43.1729],11);
-  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(mA);
+  (()=>{const osm=L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,className:"tema-escuro",attribution:"© OpenStreetMap"}).addTo(mA);
+    const sat=L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:"Imagens © Esri"});
+    L.control.layers({"Mapa":osm,"Satélite":sat}).addTo(mA)})();
   mA.on("click",e=>ponto(e.latlng.lat,e.latlng.lng));
 }
 let resultados=[];
 const dorme=ms=>new Promise(r=>setTimeout(r,ms));
-const nom=async q=>(await fetch("https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=br&q="+encodeURIComponent(q))).json();
+const NOM="https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=br&";
+const nom=async q=>(await fetch(NOM+"q="+encodeURIComponent(q))).json();
+const nomEst=async s=>(await fetch(NOM+"city=Rio%20de%20Janeiro&street="+encodeURIComponent(s))).json();
 async function buscarEnd(){
   const end=$("end").value.trim(),loc=$("local").value.trim();
   if(!end&&!loc)return msg("Escreva o endereço antes de buscar.");
   const rio=s=>/rio de janeiro|\brj\b/i.test(s)?s:s+", Rio de Janeiro";
   const semNum=end.replace(/,\s*(n[º°.]*\s*)?\d+[a-z]?(\s*-\s*\w+)?(?=\s*,|$)/i,"").replace(/\s+/g," ").trim();
-  const tent=[[end,false],[semNum&&semNum!==end?semNum:"",true],[loc,true]].filter(x=>x[0]);
+  const mm=end.match(/^([^,]+?)[,\s]+(?:n[º°.]*\s*)?(\d+[a-z]?)(?=\s*(?:,|$))/i);
+  const tent=[{q:end},mm?{est:mm[2]+" "+mm[1]}:null,{q:semNum!==end?semNum:"",aprox:true},{q:loc,aprox:true}].filter(x=>x&&(x.q||x.est));
   $("geoTxt").textContent="Buscando...";$("geoRes").innerHTML="";
   try{
     for(let i=0;i<tent.length;i++){
       if(i)await dorme(1100);
-      const [q,aprox]=tent[i],j=await nom(rio(q));
+      const t=tent[i],j=t.est?await nomEst(t.est):await nom(rio(t.q));
       if(!j.length)continue;
       resultados=j;
-      if(j.length===1){escolher(0);if(aprox)$("geoTxt").textContent="Achei a região, mas não o número exato. Arraste o pino até o ponto certo.";return}
-      $("geoTxt").textContent=aprox?"Não achei o número exato. Escolha a rua e ajuste o pino depois:":"Escolha o endereço certo:";
+      if(j.length===1){escolher(0);if(t.aprox)$("geoTxt").textContent="Achei a região, mas não o número exato. Use o satélite (canto do mapa) e arraste o pino até o ponto certo.";return}
+      $("geoTxt").textContent=t.aprox?"Não achei o número exato. Escolha a rua e ajuste o pino depois:":"Escolha o endereço certo:";
       $("geoRes").innerHTML=j.map((x,k)=>`<button type="button" class="it0" data-g="${k}">${esc(x.display_name)}</button>`).join("");
       return;
     }
-    $("geoTxt").textContent="Não achei esse endereço. Clique no mapa para marcar o local.";
-  }catch{$("geoTxt").textContent="A busca falhou. Clique no mapa para marcar o local."}
+    $("geoTxt").textContent="Não achei esse endereço. Clique no mapa ou cole as coordenadas.";
+  }catch{$("geoTxt").textContent="A busca falhou. Clique no mapa ou cole as coordenadas."}
 }
 function escolher(i){const x=resultados[i];ponto(+x.lat,+x.lon,17);$("geoRes").innerHTML=""}
 $("geo").onclick=buscarEnd;
 $("end").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();buscarEnd()}});
 $("geoRes").onclick=e=>{const i=e.target.dataset.g;if(i!==undefined)escolher(+i)};
 $("end").addEventListener("input",()=>{$("lat").value="";$("lng").value="";if(mk){mA.removeLayer(mk);mk=null}$("geoTxt").textContent="Endereço alterado: busque no mapa de novo."});
+
+$("coordOk").onclick=()=>{
+  const m=$("coord").value.replace(/,(?=\d)/g,".").match(/(-?\d{1,3}\.\d+)\s*[,;\s]\s*(-?\d{1,3}\.\d+)/);
+  if(!m)return msg("Cole as coordenadas no formato -22.9068, -43.1729.");
+  const la=+m[1],ln=+m[2];
+  if(Math.abs(la)>90||Math.abs(ln)>180)return msg("Essas coordenadas não são válidas.");
+  ponto(la,ln,18);$("coord").value="";msg();
+};
+const rad=x=>x*Math.PI/180;
+const kmd=(a,b,c,d)=>{const h=Math.sin(rad(c-a)/2)**2+Math.cos(rad(a))*Math.cos(rad(c))*Math.sin(rad(d-b)/2)**2;return 12742*Math.asin(Math.sqrt(h))};
+let mAr,camAr,celulas=[];
+async function carregarAreas(){
+  if(!mAr){mAr=L.map("mapaAreas").setView([-22.9068,-43.1729],10);L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,className:"tema-escuro",attribution:"© OpenStreetMap"}).addTo(mAr);camAr=L.layerGroup().addTo(mAr)}
+  setTimeout(()=>mAr.invalidateSize(),60);
+  const [a,e]=await Promise.all([db.rpc("areas_usuarios"),db.from("eventos").select("lat,lng").gte("data",iso(new Date()))]);
+  if(a.error)return msg("Erro ao carregar áreas: "+a.error.message+" (rodou o setup12.sql?)");
+  const evs=(e.data||[]).filter(x=>x.lat!=null&&x.lng!=null);
+  celulas=a.data.map(c=>{const n=evs.filter(x=>kmd(c.lat,c.lng,x.lat,x.lng)<=3).length;return {...c,ev:n,score:c.usuarios/(n+1)}}).sort((x,y)=>y.score-x.score);
+  camAr.clearLayers();
+  celulas.forEach(c=>L.circle([c.lat,c.lng],{radius:1000,color:c.ev===0?"#E8323F":"#ffffff",weight:1,fillOpacity:.4}).addTo(camAr).bindPopup(c.usuarios+" usuário(s) · "+c.ev+" evento(s) a até 3 km"));
+  if(celulas.length)mAr.fitBounds(L.latLngBounds(celulas.map(c=>[c.lat,c.lng])).pad(.3),{maxZoom:13});
+  $("arTotal").textContent=celulas.length?celulas.reduce((s,c)=>s+c.usuarios,0)+" pessoa(s) compartilhando em "+celulas.length+" região(ões).":"";
+  $("arLista").innerHTML=celulas.length?celulas.slice(0,10).map((c,i)=>`<div class="it"><div><b>${c.usuarios} usuário(s) · ${c.ev} evento(s) por perto</b><small>${c.ev===0?"Sem eventos cadastrados por aqui. Vale procurar. ":""}Perto de ${c.lat.toFixed(2)}, ${c.lng.toFixed(2)}</small></div><div><button class="btn sec" data-ar="${i}">Ver no mapa</button></div></div>`).join(""):"<p>Ninguém compartilhou a área aproximada ainda.</p>";
+}
+$("arLista").onclick=e=>{const i=e.target.dataset.ar;if(i!==undefined){const c=celulas[+i];mAr.setView([c.lat,c.lng],14);scrollTo(0,0)}};
 
 async function carregarAv(){
   const {data,error}=await db.from("avisos").select("*").order("criado_em",{ascending:false}).limit(20);
@@ -120,7 +156,7 @@ $("avLista").onclick=async e=>{
   if(id&&confirm("Excluir este aviso?")){const {error}=await db.from("avisos").delete().eq("id",id);msg(error?"Não excluiu: "+error.message:"Aviso excluído.");carregarAv()}
 };
 
-function aba(n){["p1","p2","p3"].forEach((p,i)=>$(p).hidden=i!==n);document.querySelectorAll(".abas button").forEach((b,i)=>b.classList.toggle("on",i===n));if(n===2&&!users.length)carregarUsers();if(n===0&&mA)setTimeout(()=>mA.invalidateSize(),60);msg()}
+function aba(n){["p1","p2","p3","p4"].forEach((p,i)=>$(p).hidden=i!==n);document.querySelectorAll(".abas button").forEach((b,i)=>b.classList.toggle("on",i===n));if(n===2&&!users.length)carregarUsers();if(n===3)carregarAreas();if(n===0&&mA)setTimeout(()=>mA.invalidateSize(),60);msg()}
 document.querySelector(".abas").onclick=e=>{const n=e.target.dataset.aba;if(n!==undefined)aba(+n)};
 let users=[],socios=new Set();
 async function carregarUsers(){

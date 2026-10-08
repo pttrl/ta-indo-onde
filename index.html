@@ -4,7 +4,7 @@
 <title>TIO — eventos da cidade</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="style.css?v=19"></head><body>
+<link rel="stylesheet" href="style.css?v=20"></head><body>
 <header class="bar"><div class="wrap"><a class="logo" href="./">TIO<i>.</i><small>tá indo onde?</small></a>
 <div class="dir"><div class="av"><button class="sino" id="sino" aria-label="Avisos" aria-expanded="false"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><i id="pt" hidden></i></button><div class="avmenu" id="avMenu" hidden></div></div>
 <nav id="nav"><a class="on" href="entrar.html">Entrar</a></nav></div></div></header>
@@ -32,6 +32,7 @@
 <div id="v1" hidden>
 <h2 style="margin-top:8px">Perto de você</h2>
 <p class="dica" id="nTxt" style="margin-bottom:14px;font-size:1rem">Ative sua localização para ver no mapa os rolês mais próximos. Sua posição fica só no seu aparelho.</p>
+<label class="ck" id="nShareBox" hidden style="margin-bottom:14px"><input type="checkbox" id="nShare"><span>Compartilhar minha área aproximada com o TIO (opcional). Guardamos só uma posição arredondada, de cerca de 1 km, para saber onde há mais gente e trazer eventos mais relevantes. Você pode desligar quando quiser.</span></label>
 <button class="btn" id="nBtn">Usar minha localização</button>
 <div id="mapa" hidden></div>
 <div class="grid" id="nLista" style="margin-top:16px"></div>
@@ -107,12 +108,21 @@ db.from("avisos").select("*").order("criado_em",{ascending:false}).limit(20).the
 
 const rad=x=>x*Math.PI/180;
 const km=(a,b,c,d)=>{const h=Math.sin(rad(c-a)/2)**2+Math.cos(rad(a))*Math.cos(rad(c))*Math.sin(rad(d-b)/2)**2;return 12742*Math.asin(Math.sqrt(h))};
+let ultima=null;
+const salvarArea=(la,ln)=>db.from("localizacoes").upsert({user_id:user.id,lat:Math.round(la*100)/100,lng:Math.round(ln*100)/100},{onConflict:"user_id"});
+$("nShare").onchange=async()=>{
+  if(!user)return;const on=$("nShare").checked;
+  const {error}=await db.from("perfis").upsert({user_id:user.id,email:user.email,compartilha_local:on},{onConflict:"user_id"});
+  if(error){$("nShare").checked=!on;return $("nTxt").textContent="Não foi possível salvar essa preferência."}
+  if(!on)await db.from("localizacoes").delete().eq("user_id",user.id);else if(ultima)salvarArea(ultima[0],ultima[1]);
+};
 let mapa,camada;
 const dot=c=>L.divIcon({className:"",html:`<span class="pin ${c}"></span>`,iconSize:[20,20],iconAnchor:[10,10]});
 function mostrarPerto(la,ln){
+  ultima=[la,ln];if(user&&$("nShare").checked)salvarArea(la,ln);
   const l=ev.filter(e=>e.lat!=null&&e.lng!=null).map(e=>({e,d:km(la,ln,e.lat,e.lng)})).sort((a,b)=>a.d-b.d).slice(0,20);
   $("mapa").hidden=false;
-  if(!mapa){mapa=L.map("mapa");L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(mapa);camada=L.layerGroup().addTo(mapa)}
+  if(!mapa){mapa=L.map("mapa");L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,className:"tema-escuro",attribution:"© OpenStreetMap"}).addTo(mapa);camada=L.layerGroup().addTo(mapa)}
   camada.clearLayers();
   L.marker([la,ln],{icon:dot("eu")}).addTo(camada).bindPopup("Você está aqui");
   l.forEach(({e,d})=>L.marker([e.lat,e.lng],{icon:dot("ev")}).addTo(camada).bindPopup(`<b>${esc(e.titulo)}</b><br><a href="evento.html?id=${e.id}">Ver detalhes</a><br>${e.endereco?esc(e.endereco)+"<br>":""}${esc(fmt(e.data,{day:"numeric",month:"short"}))} · ${e.hora?e.hora.slice(0,5):"horário a confirmar"}<br>${d.toFixed(1).replace(".",",")} km<br><a href="https://www.google.com/maps/dir/?api=1&destination=${e.lat},${e.lng}" target="_blank" rel="noopener">Como chegar</a>`));
@@ -144,6 +154,8 @@ $("hab").onclick=e=>{const v=e.target.dataset.v;if(v===undefined)return;
     $("cta")?.remove();
     $("sair").onclick=async()=>{await db.auth.signOut();location.reload()};
     const {data:f}=await db.from("favoritos").select("evento_id");favs=new Set((f||[]).map(x=>x.evento_id));
+    const {data:pf}=await db.from("perfis").select("compartilha_local").eq("user_id",user.id).maybeSingle();
+    $("nShareBox").hidden=false;$("nShare").checked=!!pf?.compartilha_local;
   }
   const {data,error}=await db.from("eventos").select("*").gte("data",hoje).order("data").order("hora");
   if(error){$("hoje").innerHTML='<div class="vazio">Não foi possível carregar os eventos agora.</div>';return}

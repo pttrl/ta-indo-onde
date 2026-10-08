@@ -96,9 +96,9 @@ a.avi{display:block;text-decoration:none;color:inherit}a.avi:hover{background:va
 .tg{font-size:.7rem;font-weight:600;border:1px solid var(--line);border-radius:99px;padding:1px 8px;color:var(--mut);margin-left:4px;vertical-align:middle}
 
 /* mapa e menu do usuário */
-#mapa,#mapaAdm{height:380px;border-radius:18px;border:1px solid var(--line);margin-top:12px;overflow:hidden;isolation:isolate}
+#mapa,#mapaAdm,#mapaAreas{height:380px;border-radius:18px;border:1px solid var(--line);margin-top:12px;overflow:hidden;isolation:isolate}
 #mapaAdm{height:240px;border-radius:12px}
-#mapa .leaflet-tile-pane,#mapaAdm .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.9) contrast(.9) saturate(.5)}
+.tema-escuro{filter:invert(1) hue-rotate(180deg) brightness(.9) contrast(.9) saturate(.5)}
 .leaflet-container{font-family:inherit}
 .pin{display:block;width:20px;height:20px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 3px rgba(0,0,0,.35)}
 .pin.ev{background:var(--accl)}.pin.eu{background:#3B82F6}
